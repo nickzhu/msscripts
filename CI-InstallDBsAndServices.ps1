@@ -86,6 +86,20 @@ param([String]$ScriptsLocation, [String]$vmHyperVName, [String]$baseFolderPath, 
   
   Wait-Job (@($installPPSServicesJob) | where {$_ -ne $null}) -Force
 
+  # AP services as rules engine does not fit well into current IIS-oriented deployment model so 
+  $installPPSServicesJob = Start-Job -Name "Install simple AP Services" -ScriptBlock {
+    $ScriptsLocation = $args[0]
+    $vmHyperVName = $args[1]
+    $baseFolderPath = $args[2]
+    $VMFolder = $args[3]
+    $cargs = "-File $ScriptsLocation\CI-InstallSimpleAPServices.ps1 ""$vmHyperVName"" ""$baseFolderPath"""
+    cd $ScriptsLocation
+    Start-Process powershell -ArgumentList $cargs -WorkingDirectory $ScriptsLocation -RedirectStandardOutput "$VMFolder\6.3-InstallSimpleAPServices.log" -Wait -RedirectStandardError "$VMFolder\6.3-InstallSimpleAPServices_Error.log"
+
+ } -ArgumentList @($ScriptsLocation, $vmHyperVName, $baseFolderPath, $VMFolder)
+  
+  Wait-Job (@($installPPSServicesJob) | where {$_ -ne $null}) -Force
+  
   #UI post installation setup
   [ScriptBlock]$command = 
   {

@@ -91,6 +91,7 @@ cmd /c C:\windows\system32\inetsrv\appcmd set config -section:system.application
 }
 $output = Execute-RemoteProcess $address $command $userName $password
 
+
 # Log-Info "Wait for replciation. " -isNewTask $true 
 # Start-Sleep -Seconds 30*60
 
@@ -117,6 +118,9 @@ Log-Info "Navigate to CM MT EVTs. " -isNewTask $true
 (New-Object Net.Webclient).DownloadString("http://{machine}:8080/ODataApi/Evt/health".Replace("{machine}", $address));
 Start-Sleep -Seconds 120
 
+Log-Info "Starting rules engine"
+$output = Start-FakeAP "RulesEngine" $address
+Log-Info "rules engine start output: $output" -isNewTask $true 
 
 Log-Info "Updating builds xml with Replication status"
 Add-ReplicationStatusToXML $address $vmBuildsXml 
@@ -159,7 +163,7 @@ $customerDBDeploymentStatus = $xml.SelectSingleNode("/Summary/Deployments/Deploy
 if ($customerDBDeploymentStatus -eq "Pass")
 {
   Log-Info "Initiating Customer DB BVTs" -isNewTask $true 
-  $customerDBJob = RunBVT-CustomerDB "$customerDbDropPath\ClientCenter\DB\Test\CustomerDBTests" $address "$bvtbasedropfolder\bvt-customerdb" "AppsVHDBVTs"  
+  $customerDBJob = RunBVT-CustomerDB "$customerDbDropPath\app\Test\CampaignManagementMT\" $address "$bvtbasedropfolder\bvt-customerdb" "AppsVHDBVTs"
 }
 else
 {
@@ -212,7 +216,7 @@ $cmJob = RunBVT-CampaignUI "$campaignUiDropPath" $address $fqdn "$bvtbasedropfol
 Log-Info "Waiting For Test To Complete with Timeout set to $($bvtTimeLimit) seconds. " -isNewTask $true
 Wait-Job ( @($campaignmtbvtjob,$campaignapi8mergedbvtjob,$campaignapibvtjob,$campaignapi9bvtjob,$cctestjob,$mcmtTestJob,$campaignDBJob,$stagingAreaJob,$customerDBJob,$cmJob,$ccuiTestJob,$campaignMiddleTierBvtJob,$ccapiv9TestJob,$bulkBvtJob,$ccapiTestJob,$desktopJob) | where {$_ -ne $null} ) -Timeout (35 * 60) # time in seconds 
 
-
+Validate-APProcess "RulesEngine.Execution" $address $userName $password
 # Run Evts 
 Log-Info "Updating builds xml with EVT Results"
 Update-XMLWithEvtResults $vmBuildsXml 

@@ -76,6 +76,11 @@ cmd /c C:\windows\system32\inetsrv\appcmd set config -section:system.application
 
 $output = Execute-RemoteProcess $address $command $userName $password
 
+Log-Info "Starting rules engine"
+$output = Start-FakeAP "RulesEngine" $address
+Log-Info "rules engine start output: $output" -isNewTask $true 
+
+
 # Log-Info "Wait for replciation. " -isNewTask $true 
 # Start-Sleep -Seconds 30*60
 
@@ -106,6 +111,7 @@ Start-Sleep -Seconds 120
 Log-Info "Updating builds xml with Replication status"
 Add-ReplicationStatusToXML $address $vmBuildsXml 
 
+Validate-APProcess "RulesEngine.Execution" $address
 
 # Run Evts 
 Log-Info "Updating builds xml with EVT Results"
